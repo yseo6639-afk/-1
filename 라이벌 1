@@ -1,0 +1,265 @@
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local SoundService = game:GetService("SoundService")
+local UserInputService = game:GetService("UserInputService")
+
+local player = Players.LocalPlayer
+local playerGui = player:WaitForChild("PlayerGui")
+
+-- 공통 클릭 사운드 재생 함수
+local function playClickSound()
+	local sound = Instance.new("Sound")
+	sound.SoundId = "rbxassetid://4590657391"
+	sound.Volume = 1
+	sound.Parent = SoundService
+	sound:Play()
+	
+	-- 재생 끝나면 사운드 인스턴스 자동 삭제
+	task.delay(1, function()
+		if sound then sound:Destroy() end
+	end)
+end
+
+-- ==========================================
+-- [1단계] 컴팩트 로딩 화면 GUI 생성
+-- ==========================================
+local loadingGui = Instance.new("ScreenGui")
+loadingGui.Name = "CatHubLoadingGui"
+loadingGui.IgnoreGuiInset = true
+loadingGui.Parent = playerGui
+
+local loadingBox = Instance.new("Frame")
+loadingBox.Size = UDim2.new(0, 280, 0, 85)
+loadingBox.Position = UDim2.new(0.5, -140, 0.5, -42)
+loadingBox.BackgroundColor3 = Color3.fromRGB(10, 10, 10)
+loadingBox.BorderColor3 = Color3.fromRGB(255, 255, 255)
+loadingBox.BorderSizePixel = 1
+loadingBox.ClipsDescendants = true
+loadingBox.Parent = loadingGui
+
+-- 로딩 창 드래그 기능
+local dragging, dragStart, startPos
+loadingBox.InputBegan:Connect(function(input)
+	if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+		dragging = true
+		dragStart = input.Position
+		startPos = loadingBox.Position
+		input.Changed:Connect(function()
+			if input.UserInputState == Enum.UserInputState.End then dragging = false end
+		end)
+	end
+end)
+
+UserInputService.InputChanged:Connect(function(input)
+	if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
+		local delta = input.Position - dragStart
+		loadingBox.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+	end
+end)
+
+-- 눈 내리는 효과
+local snowHolder = Instance.new("Folder")
+snowHolder.Parent = loadingBox
+local snowflakes = {}
+for i = 1, 15 do
+	local flake = Instance.new("Frame")
+	flake.Size = UDim2.new(0, 2, 0, 2)
+	flake.Position = UDim2.new(math.random(), 0, math.random(), 0)
+	flake.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+	flake.BackgroundTransparency = 0.4
+	flake.BorderSizePixel = 0
+	flake.Parent = snowHolder
+	table.insert(snowflakes, { instance = flake, speed = math.random(15, 35) / 1000, drift = math.random(-3, 3) / 1000 })
+end
+
+local titleLabel = Instance.new("TextLabel")
+titleLabel.Size = UDim2.new(1, -20, 0, 16)
+titleLabel.Position = UDim2.new(0, 10, 0, 10)
+titleLabel.BackgroundTransparency = 1
+titleLabel.Text = "CAT HUB // RIVALS"
+titleLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+titleLabel.TextSize = 10
+titleLabel.Font = Enum.Font.Code
+titleLabel.TextXAlignment = Enum.TextXAlignment.Left
+titleLabel.Parent = loadingBox
+
+local statusLabel = Instance.new("TextLabel")
+statusLabel.Size = UDim2.new(1, -20, 0, 14)
+statusLabel.Position = UDim2.new(0, 10, 0, 28)
+statusLabel.BackgroundTransparency = 1
+statusLabel.Text = "Loading... 0%"
+statusLabel.TextColor3 = Color3.fromRGB(150, 150, 150)
+statusLabel.TextSize = 9
+statusLabel.Font = Enum.Font.Code
+statusLabel.TextXAlignment = Enum.TextXAlignment.Left
+statusLabel.Parent = loadingBox
+
+local barBackground = Instance.new("Frame")
+barBackground.Size = UDim2.new(1, -20, 0, 4)
+barBackground.Position = UDim2.new(0, 10, 0, 48)
+barBackground.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
+barBackground.BorderColor3 = Color3.fromRGB(255, 255, 255)
+barBackground.BorderSizePixel = 1
+barBackground.Parent = loadingBox
+
+local progressBar = Instance.new("Frame")
+progressBar.Size = UDim2.new(0, 0, 1, 0)
+progressBar.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+progressBar.BorderSizePixel = 0
+progressBar.Parent = barBackground
+
+-- 로딩 루프 실행
+math.randomseed(tick())
+local randomLoadingTime = math.random(300, 500) / 100 -- 3초 ~ 5초
+local startTime = tick()
+local isFinished = false
+
+local connection
+connection = RunService.RenderStepped:Connect(function(dt)
+	for _, flake in ipairs(snowflakes) do
+		local pos = flake.instance.Position
+		local newY = pos.Y.Scale + flake.speed * dt
+		local newX = pos.X.Scale + flake.drift * dt
+		if newY > 1.1 then newY = -0.1 end
+		if newX > 1.1 then newX = -0.1 elseif newX < -0.1 then newX = 1.1 end
+		flake.instance.Position = UDim2.new(newX, 0, newY, 0)
+	end
+	
+	if isFinished then return end
+	
+	local elapsedTime = tick() - startTime
+	local progress = math.clamp(elapsedTime / randomLoadingTime, 0, 1)
+	
+	progressBar.Size = UDim2.new(progress, 0, 1, 0)
+	statusLabel.Text = string.format("Loading... %d%%", math.floor(progress * 100))
+	
+	if progress >= 1 then
+		isFinished = true
+		statusLabel.Text = "ENJOY!"
+		statusLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+		
+		playClickSound() -- 로딩 완료 사운드
+		task.wait(0.7)
+		
+		connection:Disconnect()
+		loadingGui:Destroy()
+		
+		-- ==========================================
+		-- [2단계] 메인 허브 GUI 소환 (로딩 끝난 후 등장)
+		-- ==========================================
+		local mainGui = Instance.new("ScreenGui")
+		mainGui.Name = "CatHubMainGui"
+		mainGui.IgnoreGuiInset = true
+		mainGui.Parent = playerGui
+		
+		local mainBox = Instance.new("Frame")
+		mainBox.Size = UDim2.new(0, 320, 0, 180)
+		mainBox.Position = UDim2.new(0.5, -160, 0.5, -90)
+		mainBox.BackgroundColor3 = Color3.fromRGB(10, 10, 10)
+		mainBox.BorderColor3 = Color3.fromRGB(255, 255, 255)
+		mainBox.BorderSizePixel = 1
+		mainBox.Parent = mainGui
+		
+		-- 메인창 드래그 기능
+		local mainDragging, mainDragStart, mainStartPos
+		mainBox.InputBegan:Connect(function(input)
+			if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+				mainDragging = true
+				mainDragStart = input.Position
+				mainStartPos = mainBox.Position
+				input.Changed:Connect(function()
+					if input.UserInputState == Enum.UserInputState.End then mainDragging = false end
+				end)
+			end
+		end)
+
+		UserInputService.InputChanged:Connect(function(input)
+			if mainDragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
+				local delta = input.Position - mainDragStart
+				mainBox.Position = UDim2.new(mainStartPos.X.Scale, mainStartPos.X.Offset + delta.X, mainStartPos.Y.Scale, mainStartPos.Y.Offset + delta.Y)
+			end
+		end)
+		
+		local mainTitle = Instance.new("TextLabel")
+		mainTitle.Size = UDim2.new(1, -20, 0, 25)
+		mainTitle.Position = UDim2.new(0, 10, 0, 15)
+		mainTitle.BackgroundTransparency = 1
+		mainTitle.Text = "CAT HUB // RIVALS"
+		mainTitle.TextColor3 = Color3.fromRGB(255, 255, 255)
+		mainTitle.TextSize = 13
+		mainTitle.Font = Enum.Font.Code
+		mainTitle.TextXAlignment = Enum.TextXAlignment.Left
+		mainTitle.Parent = mainBox
+		
+		local mainSub = Instance.new("TextLabel")
+		mainSub.Size = UDim2.new(1, -20, 0, 20)
+		mainSub.Position = UDim2.new(0, 10, 0, 38)
+		mainSub.BackgroundTransparency = 1
+mainSub.Text = "Welcome! Choose an option below."
+		mainSub.TextColor3 = Color3.fromRGB(150, 150, 150)
+		mainSub.TextSize = 10
+		mainSub.Font = Enum.Font.Code
+		mainSub.TextXAlignment = Enum.TextXAlignment.Left
+		mainSub.Parent = mainBox
+		
+		-- 디스코드 복사 버튼
+		local discordButton = Instance.new("TextButton")
+		discordButton.Size = UDim2.new(1, -20, 0, 35)
+		discordButton.Position = UDim2.new(0, 10, 0, 75)
+		discordButton.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
+		discordButton.BorderColor3 = Color3.fromRGB(255, 255, 255)
+		discordButton.BorderSizePixel = 1
+		discordButton.Text = "COPY DISCORD LINK"
+		discordButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+		discordButton.TextSize = 12
+		discordButton.Font = Enum.Font.Code
+		discordButton.Parent = mainBox
+		
+		-- 게임 시작 버튼
+		local playButton = Instance.new("TextButton")
+		playButton.Size = UDim2.new(1, -20, 0, 35)
+		playButton.Position = UDim2.new(0, 10, 0, 120)
+		playButton.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+		playButton.BorderColor3 = Color3.fromRGB(255, 255, 255)
+		playButton.BorderSizePixel = 1
+		playButton.Text = "START GAME"
+		playButton.TextColor3 = Color3.fromRGB(0, 0, 0)
+		playButton.TextSize = 12
+		playButton.Font = Enum.Font.Code
+		playButton.Parent = mainBox
+		
+		-- 안내 메시지 라벨
+		local noticeLabel = Instance.new("TextLabel")
+		noticeLabel.Size = UDim2.new(1, 0, 0, 20)
+		noticeLabel.Position = UDim2.new(0, 0, 1, 5)
+		noticeLabel.BackgroundTransparency = 1
+		noticeLabel.Text = ""
+		noticeLabel.TextColor3 = Color3.fromRGB(0, 255, 100)
+		noticeLabel.TextSize = 10
+		noticeLabel.Font = Enum.Font.Code
+		noticeLabel.TextXAlignment = Enum.TextXAlignment.Center
+		noticeLabel.Parent = mainBox
+		
+		-- [디스코드 버튼 클릭 이벤트]
+		discordButton.MouseButton1Click:Connect(function()
+			playClickSound() -- 누를 때 소리 재생
+			local discordLink = "https://discord.gg/rhG4hAMkU"
+			
+			if setclipboard then
+				setclipboard(discordLink)
+				noticeLabel.Text = "Discord link copied to clipboard!"
+				task.wait(2)
+				noticeLabel.Text = ""
+			else
+				noticeLabel.Text = "Clipboard not supported."
+			end
+		end)
+		
+		-- [게임 시작 버튼 클릭 이벤트]
+		playButton.MouseButton1Click:Connect(function()
+			playClickSound() -- 누를 때 소리 재생
+			task.wait(0.2) -- 소리가 살짝 들릴 여유 시간
+			mainGui:Destroy()
+		end)
+	end
+end)
