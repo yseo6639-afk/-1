@@ -1,0 +1,405 @@
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local SoundService = game:GetService("SoundService")
+local UserInputService = game:GetService("UserInputService")
+local TweenService = game:GetService("TweenService")
+
+local player = Players.LocalPlayer
+local playerGui = player:WaitForChild("PlayerGui")
+
+-- 🎵 효과음 재생 함수
+local function playSound(soundId, volume)
+	local sound = Instance.new("Sound")
+	sound.SoundId = "rbxassetid://" .. tostring(soundId)
+	sound.Volume = volume or 1
+	sound.Parent = SoundService
+	sound:Play()
+	task.delay(2, function()
+		if sound then sound:Destroy() end
+	end)
+end
+
+-- ==========================================
+-- [1단계] 로딩 화면 생성 및 등장
+-- ==========================================
+local screenGui = Instance.new("ScreenGui")
+screenGui.Name = "CatHubCompleteGui"
+screenGui.IgnoreGuiInset = true
+screenGui.Parent = playerGui
+
+local mainBox = Instance.new("Frame")
+mainBox.Size = UDim2.new(0, 0, 0, 0)
+mainBox.Position = UDim2.new(0.5, 0, 0.5, 0)
+mainBox.BackgroundColor3 = Color3.fromRGB(10, 10, 10)
+mainBox.BorderColor3 = Color3.fromRGB(255, 255, 255)
+mainBox.BorderSizePixel = 1
+mainBox.ClipsDescendants = true
+mainBox.Parent = screenGui
+
+playSound(4590657391, 0.7)
+local appearTween = TweenService:Create(mainBox, TweenInfo.new(0.5, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
+	Size = UDim2.new(0, 300, 0, 85),
+	Position = UDim2.new(0.5, -150, 0.5, -42)
+})
+appearTween:Play()
+appearTween.Completed:Wait()
+
+-- 창 드래그 기능
+local dragging, dragStart, startPos
+mainBox.InputBegan:Connect(function(input)
+	if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+		dragging = true
+		dragStart = input.Position
+		startPos = mainBox.Position
+		input.Changed:Connect(function()
+			if input.UserInputState == Enum.UserInputState.End then dragging = false end
+		end)
+	end
+end)
+
+UserInputService.InputChanged:Connect(function(input)
+	if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
+		local delta = input.Position - dragStart
+		mainBox.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+	end
+end)
+
+-- 눈 내리는 파티클
+local snowHolder = Instance.new("Folder")
+snowHolder.Parent = mainBox
+local snowflakes = {}
+for i = 1, 15 do
+	local flake = Instance.new("Frame")
+	flake.Size = UDim2.new(0, 2, 0, 2)
+	flake.Position = UDim2.new(math.random(), 0, math.random(), 0)
+	flake.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+	flake.BackgroundTransparency = 0.4
+	flake.BorderSizePixel = 0
+	flake.Parent = snowHolder
+	table.insert(snowflakes, { instance = flake, speed = math.random(15, 30) / 1000, drift = math.random(-3, 3) / 1000 })
+end
+
+local titleLabel = Instance.new("TextLabel")
+titleLabel.Size = UDim2.new(1, -20, 0, 16)
+titleLabel.Position = UDim2.new(0, 10, 0, 10)
+titleLabel.BackgroundTransparency = 1
+titleLabel.Text = "CAT HUB // RIVALS"
+titleLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+titleLabel.TextSize = 10
+titleLabel.Font = Enum.Font.Code
+titleLabel.TextXAlignment = Enum.TextXAlignment.Left
+titleLabel.Parent = mainBox
+
+local statusLabel = Instance.new("TextLabel")
+statusLabel.Size = UDim2.new(1, -20, 0, 14)
+statusLabel.Position = UDim2.new(0, 10, 0, 28)
+statusLabel.BackgroundTransparency = 1
+statusLabel.Text = "Loading... 0%"
+statusLabel.TextColor3 = Color3.fromRGB(150, 150, 150)
+statusLabel.TextSize = 9
+statusLabel.Font = Enum.Font.Code
+statusLabel.TextXAlignment = Enum.TextXAlignment.Left
+statusLabel.Parent = mainBox
+
+local barBackground = Instance.new("Frame")
+barBackground.Size = UDim2.new(1, -20, 0, 4)
+barBackground.Position = UDim2.new(0, 10, 0, 48)
+barBackground.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
+barBackground.BorderColor3 = Color3.fromRGB(255, 255, 255)
+barBackground.BorderSizePixel = 1
+barBackground.Parent = mainBox
+
+local progressBar = Instance.new("Frame")
+progressBar.Size = UDim2.new(0, 0, 1, 0)
+progressBar.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+progressBar.BorderSizePixel = 0
+progressBar.Parent = barBackground
+
+-- 로딩 루프 (시간 조절)
+math.randomseed(tick())
+local randomLoadingTime = math.random(150, 250) / 100
+local startTime = tick()
+local isFinished = false
+
+local connection
+connection = RunService.RenderStepped:Connect(function(dt)
+	for _, flake in ipairs(snowflakes) do
+		local pos = flake.instance.Position
+		local newY = pos.Y.Scale + flake.speed * dt
+		local newX = pos.X.Scale + flake.drift * dt
+		if newY > 1.1 then newY = -0.1 end
+		if newX > 1.1 then newX = -0.1 elseif newX < -0.1 then newX = 1.1 end
+		flake.instance.Position = UDim2.new(newX, 0, newY, 0)
+	end
+	
+	if isFinished then return end
+	
+	local elapsedTime = tick() - startTime
+	local progress = math.clamp(elapsedTime / randomLoadingTime, 0, 1)
+	
+	progressBar.Size = UDim2.new(progress, 0, 1, 0)
+	statusLabel.Text = string.format("Loading... %d%%", math.floor(progress * 100))
+	
+	if progress >= 1 then
+		isFinished = true
+		statusLabel.Text = "READY!"
+		statusLabel.TextColor3 = Color3.fromRGB(0, 255, 100)
+		playSound(9114221375, 1)
+		task.wait(0.6)
+		connection:Disconnect()
+		
+		-- ==========================================
+		-- [2단계] 메인 메뉴 (디스코드 & NEXT)
+		-- ==========================================
+		TweenService:Create(mainBox, TweenInfo.new(0.4, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+			Size = UDim2.new(0, 320, 0, 190),
+			Position = UDim2.new(0.5, -160, 0.5, -95)
+		}):Play()
+		
+		statusLabel:Destroy()
+		barBackground:Destroy()
+		progressBar:Destroy()
+		
+		titleLabel.Text = "CAT HUB // MAIN MENU"
+		
+		local mainSub = Instance.new("TextLabel")
+		mainSub.Size = UDim2.new(1, -20, 0, 20)
+		mainSub.Position = UDim2.new(0, 10, 0, 35)
+		mainSub.BackgroundTransparency = 1
+		mainSub.Text = "Join discord or click NEXT."
+		mainSub.TextColor3 = Color3.fromRGB(150, 150, 150)
+		mainSub.TextSize = 10
+		mainSub.Font = Enum.Font.Code
+		mainSub.TextXAlignment = Enum.TextXAlignment.Left
+		mainSub.Parent = mainBox
+		
+		local discordButton = Instance.new("TextButton")
+		discordButton.Size = UDim2.new(1, -20, 0, 32)
+		discordButton.Position = UDim2.new(0, 10, 0, 68)
+		discordButton.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
+		discordButton.BorderColor3 = Color3.fromRGB(255, 255, 255)
+		discordButton.BorderSizePixel = 1
+		discordButton.Text = "COPY DISCORD LINK"
+		discordButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+		discordButton.TextSize = 11
+		discordButton.Font = Enum.Font.Code
+		discordButton.Parent = mainBox
+		
+		local nextButton = Instance.new("TextButton")
+		nextButton.Size = UDim2.new(1, -20, 0, 32)
+		nextButton.Position = UDim2.new(0, 10, 0, 108)
+		nextButton.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+		nextButton.BorderColor3 = Color3.fromRGB(255, 255, 255)
+		nextButton.BorderSizePixel = 1
+		nextButton.Text = "NEXT"
+		nextButton.TextColor3 = Color3.fromRGB(0, 0, 0)
+		nextButton.TextSize = 11
+		nextButton.Font = Enum.Font.Code
+		nextButton.Parent = mainBox
+		
+		local noticeLabel = Instance.new("TextLabel")
+		noticeLabel.Size = UDim2.new(1, 0, 0, 20)
+		noticeLabel.Position = UDim2.new(0, 0, 1, 5)
+		noticeLabel.BackgroundTransparency = 1
+		noticeLabel.Text = ""
+		noticeLabel.TextColor3 = Color3.fromRGB(0, 255, 100)
+		noticeLabel.TextSize = 10
+		noticeLabel.Font = Enum.Font.Code
+		noticeLabel.TextXAlignment = Enum.TextXAlignment.Center
+		noticeLabel.Parent = mainBox
+		
+		discordButton.MouseButton1Click:Connect(function()
+			playSound(566503674, 1)
+			local discordLink = "https://discord.gg/rhG4hAMkU"
+			if setclipboard then
+				setclipboard(discordLink)
+				noticeLabel.TextColor3 = Color3.fromRGB(0, 255, 100)
+				noticeLabel.Text = "Discord link copied!"
+				task.wait(2)
+				noticeLabel.Text = ""
+			else
+				noticeLabel.Text = "Clipboard not supported."
+			end
+		end)
+		
+		-- ==========================================
+		-- [3단계] 키 시스템 (비밀번호: yeriyeri)
+		-- ==========================================
+		nextButton.MouseButton1Click:Connect(function()
+			playSound(566503674, 1)
+			
+			discordButton:Destroy()
+			nextButton:Destroy()
+			mainSub:Destroy()
+			
+			titleLabel.Text = "CAT HUB // KEY SYSTEM"
+			
+			local keyBox = Instance.new("TextBox")
+			keyBox.Size = UDim2.new(1, -20, 0, 35)
+			keyBox.Position = UDim2.new(0, 10, 0, 55)
+			keyBox.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
+			keyBox.BorderColor3 = Color3.fromRGB(255, 255, 255)
+			keyBox.BorderSizePixel = 1
+			keyBox.Text = ""
+			keyBox.PlaceholderText = "Enter key here..."
+			keyBox.TextColor3 = Color3.fromRGB(255, 255, 255)
+			keyBox.PlaceholderColor3 = Color3.fromRGB(100, 100, 100)
+			keyBox.TextSize = 11
+			keyBox.Font = Enum.Font.Code
+			keyBox.Parent = mainBox
+			
+			local submitButton = Instance.new("TextButton")
+			submitButton.Size = UDim2.new(1, -20, 0, 32)
+			submitButton.Position = UDim2.new(0, 10, 0, 105)
+			submitButton.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+			submitButton.BorderColor3 = Color3.fromRGB(255, 255, 255)
+			submitButton.BorderSizePixel = 1
+			submitButton.Text = "SUBMIT"
+			submitButton.TextColor3 = Color3.fromRGB(0, 0, 0)
+			submitButton.TextSize = 11
+			submitButton.Font = Enum.Font.Code
+			submitButton.Parent = mainBox
+			
+			submitButton.MouseButton1Click:Connect(function()
+				playSound(566503674, 1)
+				local enteredKey = keyBox.Text
+				
+				if enteredKey == "yeriyeri" then
+					noticeLabel.TextColor3 = Color3.fromRGB(0, 255, 100)
+					noticeLabel.Text = "Key Correct! Opening..."
+					playSound(9114221375, 1.2)
+					task.wait(1)
+					
+					keyBox:Destroy()
+					submitButton:Destroy()
+					noticeLabel:Destroy()
+					
+					-- ==========================================
+					-- [4단계] 최종 메인 UI (CAT HUB // Free Version)
+					-- ==========================================
+					TweenService:Create(mainBox, TweenInfo.new(0.4, Enum.EasingStyle.Quart, Enum.EasingDirection.Out), {
+						Size = UDim2.new(0, 520, 0, 480),
+						Position = UDim2.new(0.5, -260, 0.5, -240)
+					}):Play()
+					
+					titleLabel.Text = "CAT HUB // Free Version"
+					titleLabel.TextSize = 13
+					
+					-- 왼쪽 위 접기 (Minimize) 버튼 생성
+					local minimizeButton = Instance.new("TextButton")
+					minimizeButton.Size = UDim2.new(0, 60, 0, 20)
+					minimizeButton.Position = UDim2.new(1, -70, 0, 4)
+					minimizeButton.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
+					minimizeButton.BorderColor3 = Color3.fromRGB(255, 255, 255)
+					minimizeButton.BorderSizePixel = 1
+					minimizeButton.Text = "Minimize"
+					minimizeButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+					minimizeButton.TextSize = 9
+					minimizeButton.Font = Enum.Font.Code
+					minimizeButton.Parent = mainBox
+					
+					-- 상단 탭 버튼들
+					local tabs = {"Combat", "Legitbot", "Visuals", "Misc", "Settings"}
+					for i, tabName in ipairs(tabs) do
+						local tabBtn = Instance.new("TextButton")
+						tabBtn.Size = UDim2.new(0.2, -6, 0, 26)
+						tabBtn.Position = UDim2.new(0.01 + (i-1)*0.2, 0, 0, 30)
+						tabBtn.BackgroundColor3 = (tabName == "Legitbot") and Color3.fromRGB(255, 255, 255) or Color3.fromRGB(15, 15, 15)
+						tabBtn.BorderColor3 = Color3.fromRGB(255, 255, 255)
+						tabBtn.BorderSizePixel = 1
+						tabBtn.Text = tabName
+						tabBtn.TextColor3 = (tabName == "Legitbot") and Color3.fromRGB(0, 0, 0) or Color3.fromRGB(255, 255, 255)
+						tabBtn.TextSize = 10
+						tabBtn.Font = Enum.Font.Code
+						tabBtn.Parent = mainBox
+					end
+					
+					-- 왼쪽 박스 (Main Settings 영역)
+					local leftBox = Instance.new("Frame")
+					leftBox.Size = UDim2.new(0.48, 0, 0, 385)
+					leftBox.Position = UDim2.new(0.01, 0, 0, 65)
+					leftBox.BackgroundTransparency = 1
+					leftBox.Parent = mainBox
+					
+					local leftBorder = Instance.new("UIStroke")
+					leftBorder.Color = Color3.fromRGB(255, 255, 255)
+					leftBorder.Thickness = 1
+					leftBorder.Parent = leftBox
+					
+					local leftTitle = Instance.new("TextLabel")
+					leftTitle.Size = UDim2.new(1, -12, 0, 20)
+					leftTitle.Position = UDim2.new(0, 6, 0, 6)
+					leftTitle.BackgroundTransparency = 1
+					leftTitle.Text = "Main Settings"
+					leftTitle.TextColor3 = Color3.fromRGB(255, 255, 255)
+					leftTitle.TextSize = 10
+					leftTitle.Font = Enum.Font.Code
+					leftTitle.TextXAlignment = Enum.TextXAlignment.Left
+					leftTitle.Parent = leftBox
+					
+					-- 오른쪽 박스 (Aimbot Settings 영역)
+					local rightBox = Instance.new("Frame")
+					rightBox.Size = UDim2.new(0.48, 0, 0, 385)
+					rightBox.Position = UDim2.new(0.51, 0, 0, 65)
+					rightBox.BackgroundTransparency = 1
+					rightBox.Parent = mainBox
+					
+					local rightBorder = Instance.new("UIStroke")
+					rightBorder.Color = Color3.fromRGB(255, 255, 255)
+					rightBorder.Thickness = 1
+					rightBorder.Parent = rightBox
+					
+					local rightTitle = Instance.new("TextLabel")
+					rightTitle.Size = UDim2.new(1, -12, 0, 20)
+					rightTitle.Position = UDim2.new(0, 6, 0, 6)
+					rightTitle.BackgroundTransparency = 1
+					rightTitle.Text = "Aimbot Settings"
+					rightTitle.TextColor3 = Color3.fromRGB(255, 255, 255)
+					rightTitle.TextSize = 10
+					rightTitle.Font = Enum.Font.Code
+					rightTitle.TextXAlignment = Enum.TextXAlignment.Left
+					rightTitle.Parent = rightBox
+					
+					-- 접기(Minimize) 토글 기능 구현
+					local isMinimized = false
+					minimizeButton.MouseButton1Click:Connect(function()
+						playSound(566503674, 1)
+						isMinimized = not isMinimized
+						
+						for _, child in ipairs(mainBox:GetChildren()) do
+							if child ~= titleLabel and child ~= minimizeButton and child ~= snowHolder then
+								child.Visible = not isMinimized
+							end
+						end
+						
+						if isMinimized then
+							minimizeButton.Text = "Open"
+							TweenService:Create(mainBox, TweenInfo.new(0.3, Enum.EasingStyle.Quart, Enum.EasingDirection.Out), {
+								Size = UDim2.new(0, 520, 0, 35)
+							}):Play()
+						else
+							minimizeButton.Text = "Minimize"
+							TweenService:Create(mainBox, TweenInfo.new(0.3, Enum.EasingStyle.Quart, Enum.EasingDirection.Out), {
+								Size = UDim2.new(0, 520, 0, 480)
+							}):Play()
+						end
+					end)
+					
+				else
+					noticeLabel.TextColor3 = Color3.fromRGB(255, 50, 50)
+					noticeLabel.Text = "Wrong Key! Try again."
+					playSound(9061274092, 1)
+					
+					task.spawn(function()
+						local originalPos = mainBox.Position
+						for i = 1, 4 do
+							mainBox.Position = originalPos + UDim2.new(0, math.random(-6, 6), 0, 0)
+							task.wait(0.03)
+						end
+						mainBox.Position = originalPos
+					end)
+				end
+			end)
+		end)
+	end
+end)
