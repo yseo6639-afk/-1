@@ -1,2 +1,687 @@
-# -1
-한머
+-- language: Luau, file: korean_murder_autoshoot_fixed_v2.lua, target: Roblox Mobile / iPad (Executor)
+
+local Players = game:GetService("Players")
+local CoreGui = game:GetService("CoreGui")
+local TweenService = game:GetService("TweenService")
+local RunService = game:GetService("RunService")
+local Lighting = game:GetService("Lighting")
+
+local LocalPlayer = Players.LocalPlayer
+local PlayerGui = LocalPlayer:WaitForChild("PlayerGui")
+local Camera = workspace.CurrentCamera
+
+if CoreGui:FindFirstChild("EternalFaceUltimateHub") then
+    CoreGui.EternalFaceUltimateHub:Destroy()
+end
+
+local ScreenGui = Instance.new("ScreenGui")
+ScreenGui.Name = "EternalFaceUltimateHub"
+ScreenGui.ResetOnSpawn = false
+ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+ScreenGui.IgnoreGuiInset = true
+
+pcall(function() ScreenGui.Parent = CoreGui end)
+if ScreenGui.Parent ~= CoreGui then ScreenGui.Parent = PlayerGui end
+
+-- [1] 로딩 화면 프레임 & 눈 내리는 파티클 효과
+local LoadingFrame = Instance.new("Frame")
+LoadingFrame.Name = "LoadingFrame"
+LoadingFrame.Size = UDim2.new(1, 0, 1, 0)
+LoadingFrame.BackgroundColor3 = Color3.fromRGB(5, 5, 8)
+LoadingFrame.BorderSizePixel = 0
+LoadingFrame.Parent = ScreenGui
+
+local SnowHolder = Instance.new("Folder")
+SnowHolder.Name = "SnowParticles"
+SnowHolder.Parent = LoadingFrame
+
+task.spawn(function()
+    while LoadingFrame.Parent do
+        local flake = Instance.new("Frame")
+        local size = math.random(3, 6)
+        flake.Size = UDim2.new(0, size, 0, size)
+        flake.Position = UDim2.new(math.random(), 0, -0.05, 0)
+        flake.BackgroundColor3 = Color3.fromRGB(220, 235, 255)
+        flake.BackgroundTransparency = math.random(20, 50) / 100
+        flake.BorderSizePixel = 0
+        flake.Parent = SnowHolder
+        
+        local corner = Instance.new("UICorner")
+        corner.CornerRadius = UDim.new(1, 0)
+        corner.Parent = flake
+        
+        local fallDuration = math.random(3, 6)
+        local targetX = flake.Position.X.Scale + (math.random(-10, 10) / 100)
+        
+        TweenService:Create(flake, TweenInfo.new(fallDuration, Enum.EasingStyle.Linear), {
+            Position = UDim2.new(targetX, 0, 1.05, 0)
+        }):Play()
+        
+        task.delay(fallDuration, function()
+            if flake then flake:Destroy() end
+        end)
+        
+        task.wait(0.15)
+    end
+end)
+
+local OuterFrame = Instance.new("Frame")
+OuterFrame.Size = UDim2.new(1, -24, 1, -24)
+OuterFrame.Position = UDim2.new(0, 12, 0, 12)
+OuterFrame.BackgroundTransparency = 1
+OuterFrame.Parent = LoadingFrame
+
+local OuterStroke = Instance.new("UIStroke")
+OuterStroke.Color = Color3.fromRGB(160, 185, 220)
+OuterStroke.Thickness = 1.5
+OuterStroke.Parent = OuterFrame
+Instance.new("UICorner", OuterFrame).CornerRadius = UDim.new(0, 12)
+
+local CenterContainer = Instance.new("Frame")
+CenterContainer.Size = UDim2.new(0, 440, 0, 340)
+CenterContainer.Position = UDim2.new(0.5, -220, 0.5, -170)
+CenterContainer.BackgroundTransparency = 1
+CenterContainer.Parent = LoadingFrame
+
+local Title = Instance.new("TextLabel")
+Title.Size = UDim2.new(1, 0, 0, 35)
+Title.Position = UDim2.new(0, 0, 0, 110)
+Title.BackgroundTransparency = 1
+Title.Text = "Eternal Face."
+Title.TextColor3 = Color3.fromRGB(235, 242, 255)
+Title.TextSize = 22
+Title.Font = Enum.Font.GothamBold
+Title.Parent = CenterContainer
+
+local SubTitle = Instance.new("TextLabel")
+SubTitle.Size = UDim2.new(1, 0, 0, 20)
+SubTitle.Position = UDim2.new(0, 0, 0, 142)
+SubTitle.BackgroundTransparency = 1
+SubTitle.Text = "- U L T I M A T E  H U B -"
+SubTitle.TextColor3 = Color3.fromRGB(140, 160, 190)
+SubTitle.TextSize = 13
+SubTitle.Font = Enum.Font.GothamMedium
+SubTitle.Parent = CenterContainer
+
+local StatusText = Instance.new("TextLabel")
+StatusText.Size = UDim2.new(1, 0, 0, 20)
+StatusText.Position = UDim2.new(0, 0, 0, 180)
+StatusText.BackgroundTransparency = 1
+StatusText.Text = "· LOADING ULTIMATE PATCH... ·"
+StatusText.TextColor3 = Color3.fromRGB(120, 140, 175)
+StatusText.TextSize = 11
+StatusText.Font = Enum.Font.Code
+StatusText.Parent = CenterContainer
+
+local BarBg = Instance.new("Frame")
+BarBg.Size = UDim2.new(0, 340, 0, 8)
+BarBg.Position = UDim2.new(0.5, -170, 0, 220)
+BarBg.BackgroundColor3 = Color3.fromRGB(15, 15, 20)
+BarBg.BorderSizePixel = 0
+BarBg.Parent = CenterContainer
+Instance.new("UICorner", BarBg).CornerRadius = UDim.new(1, 0)
+
+local BarBgStroke = Instance.new("UIStroke")
+BarBgStroke.Color = Color3.fromRGB(60, 75, 100)
+BarBgStroke.Thickness = 1
+BarBgStroke.Parent = BarBg
+
+local BarFill = Instance.new("Frame")
+BarFill.Size = UDim2.new(0, 0, 1, 0)
+BarFill.BackgroundColor3 = Color3.fromRGB(230, 240, 255)
+BarFill.BorderSizePixel = 0
+BarFill.Parent = BarBg
+Instance.new("UICorner", BarFill).CornerRadius = UDim.new(1, 0)
+
+local PercentLabel = Instance.new("TextLabel")
+PercentLabel.Size = UDim2.new(0, 100, 0, 24)
+PercentLabel.Position = UDim2.new(0.5, -50, 0, 236)
+PercentLabel.BackgroundTransparency = 1
+PercentLabel.Text = "0%"
+PercentLabel.TextColor3 = Color3.fromRGB(200, 215, 240)
+PercentLabel.TextSize = 12
+PercentLabel.Font = Enum.Font.GothamBold
+PercentLabel.Parent = CenterContainer
+
+local TimeLeftLabel = Instance.new("TextLabel")
+TimeLeftLabel.Size = UDim2.new(1, 0, 0, 20)
+TimeLeftLabel.Position = UDim2.new(0, 0, 0, 265)
+TimeLeftLabel.BackgroundTransparency = 1
+TimeLeftLabel.Text = "3.0s LEFT"
+TimeLeftLabel.TextColor3 = Color3.fromRGB(110, 130, 160)
+TimeLeftLabel.TextSize = 10
+TimeLeftLabel.Font = Enum.Font.Code
+TimeLeftLabel.Parent = CenterContainer
+
+
+-- [2] 메인 허브 인터페이스 생성
+local function BuildMainHub()
+    local ToggleBtn = Instance.new("TextButton")
+    ToggleBtn.Name = "ToggleBtn"
+    ToggleBtn.Size = UDim2.new(0, 48, 0, 48)
+    ToggleBtn.Position = UDim2.new(0, 20, 0.5, -24)
+    ToggleBtn.BackgroundColor3 = Color3.fromRGB(12, 12, 16)
+    ToggleBtn.Text = "X"
+    ToggleBtn.TextColor3 = Color3.fromRGB(220, 235, 255)
+    ToggleBtn.TextSize = 20
+    ToggleBtn.Font = Enum.Font.GothamBold
+    ToggleBtn.Parent = ScreenGui
+
+    Instance.new("UICorner", ToggleBtn).CornerRadius = UDim.new(0, 12)
+    local ToggleStroke = Instance.new("UIStroke")
+    ToggleStroke.Color = Color3.fromRGB(180, 210, 255)
+    ToggleStroke.Thickness = 1.5
+    ToggleStroke.Parent = ToggleBtn
+
+    local MainFrame = Instance.new("Frame")
+    MainFrame.Name = "MainFrame"
+    MainFrame.Size = UDim2.new(0, 420, 0, 410)
+    MainFrame.Position = UDim2.new(0.5, -210, 0.5, -205)
+    MainFrame.BackgroundColor3 = Color3.fromRGB(10, 10, 14)
+    MainFrame.BorderSizePixel = 0
+    MainFrame.Active = true
+    MainFrame.Draggable = true
+    MainFrame.Parent = ScreenGui
+
+    Instance.new("UICorner", MainFrame).CornerRadius = UDim.new(0, 10)
+    local MainStroke = Instance.new("UIStroke")
+    MainStroke.Color = Color3.fromRGB(160, 190, 230)
+    MainStroke.Thickness = 1.2
+    MainStroke.Parent = MainFrame
+
+    local TitleLabel = Instance.new("TextLabel")
+    TitleLabel.Size = UDim2.new(1, 0, 0, 45)
+    TitleLabel.BackgroundTransparency = 1
+    TitleLabel.Text = "  ✦ ETERNAL FACE ULTIMATE HUB ✦"
+    TitleLabel.TextColor3 = Color3.fromRGB(240, 245, 255)
+    TitleLabel.TextSize = 12
+    TitleLabel.Font = Enum.Font.GothamBold
+    TitleLabel.TextXAlignment = Enum.TextXAlignment.Left
+    TitleLabel.Parent = MainFrame
+
+    local Divider = Instance.new("Frame")
+    Divider.Size = UDim2.new(1, -24, 0, 1)
+    Divider.Position = UDim2.new(0, 12, 0, 45)
+    Divider.BackgroundColor3 = Color3.fromRGB(45, 55, 75)
+    Divider.BorderSizePixel = 0
+    Divider.Parent = MainFrame
+
+    local Container = Instance.new("ScrollingFrame")
+    Container.Size = UDim2.new(1, -24, 1, -60)
+    Container.Position = UDim2.new(0, 12, 0, 52)
+    Container.BackgroundTransparency = 1
+    Container.CanvasSize = UDim2.new(0, 0, 0, 720)
+    Container.ScrollBarThickness = 3
+    Container.Parent = MainFrame
+
+    local UIListLayout = Instance.new("UIListLayout")
+    UIListLayout.SortOrder = Enum.SortOrder.LayoutOrder
+    UIListLayout.Padding = UDim.new(0, 10)
+    UIListLayout.Parent = Container
+
+    ToggleBtn.MouseButton1Click:Connect(function()
+        MainFrame.Visible = not MainFrame.Visible
+    end)
+
+    local function CreateFeatureButton(name, callback)
+        local Btn = Instance.new("TextButton")
+        Btn.Size = UDim2.new(1, 0, 0, 38)
+        Btn.BackgroundColor3 = Color3.fromRGB(16, 16, 22)
+        Btn.Text = "  " .. name .. " [ OFF ]"
+        Btn.TextColor3 = Color3.fromRGB(170, 185, 210)
+        Btn.TextSize, Btn.Font = 12, Enum.Font.GothamMedium
+        Btn.TextXAlignment = Enum.TextXAlignment.Left
+        Btn.Parent = Container
+        
+        Instance.new("UICorner", Btn).CornerRadius = UDim.new(0, 6)
+        local Stroke = Instance.new("UIStroke")
+        Stroke.Color = Color3.fromRGB(40, 50, 70)
+        Stroke.Thickness = 1
+        Stroke.Parent = Btn
+        
+        local active = false
+        Btn.MouseButton1Click:Connect(function()
+            active = not active
+            if active then
+                Btn.TextColor3 = Color3.fromRGB(255, 255, 255)
+                Stroke.Color = Color3.fromRGB(200, 225, 255)
+                Btn.Text = "  " .. name .. " [ ON ]"
+            else
+                Btn.TextColor3 = Color3.fromRGB(170, 185, 210)
+                Stroke.Color = Color3.fromRGB(40, 50, 70)
+                Btn.Text = "  " .. name .. " [ OFF ]"
+            end
+            callback(active)
+        end)
+    end
+
+
+    -- 1. ESP
+    local espConnections = {}
+    CreateFeatureButton("ESP", function(state)
+        if state then
+            for _, p in ipairs(Players:GetPlayers()) do
+                if p ~= LocalPlayer then
+                    local function applyESP(char)
+                        if not char then return end
+                        if char:FindFirstChild("FinalESP") then char.FinalESP:Destroy() end
+                        
+                        local highlight = Instance.new("Highlight")
+                        highlight.Name = "FinalESP"
+                        highlight.Adornee = char
+                        highlight.FillTransparency = 0.55
+                        highlight.OutlineTransparency = 0
+                        highlight.Parent = char
+                        
+                        task.spawn(function()
+                            while highlight.Parent and char:FindFirstChild("Humanoid") do
+                                local hasKnife, hasGun = false, false
+                                if p:FindFirstChild("Backpack") then
+                                    for _, item in ipairs(p.Backpack:GetChildren()) do
+                                        local n = item.Name:lower()
+                                        if n:find("knife") or n:find("칼") or n:find("dagger") then hasKnife = true end
+                                        if n:find("gun") or n:find("총") or n:find("revolver") then hasGun = true end
+                                    end
+                                end
+                                local equipped = char:FindFirstChildOfClass("Tool")
+                                if equipped then
+                                    local en = equipped.Name:lower()
+                                    if en:find("knife") or en:find("칼") or en:find("dagger") then hasKnife = true end
+                                    if en:find("gun") or en:find("총") or en:find("revolver") then hasGun = true end
+                                end
+                                
+                                local isLobby = true
+                                for _, checkP in ipairs(Players:GetPlayers()) do
+                                    local function checkHasRole(targetP)
+                                        if targetP:FindFirstChild("Backpack") then
+                                            for _, item in ipairs(targetP.Backpack:GetChildren()) do
+                                                local n = item.Name:lower()
+                                                if n:find("knife") or n:find("gun") or n:find("칼") or n:find("총") then return true end
+                                            end
+                                        end
+                                        if targetP.Character then
+                                            for _, item in ipairs(targetP.Character:GetChildren()) do
+                                                if item:IsA("Tool") then
+                                                    local n = item.Name:lower()
+                                                    if n:find("knife") or n:find("gun") or n:find("칼") or n:find("총") then return true end
+                                                end
+                                            end
+                                        end
+                                        return false
+                                    end
+                                    if checkHasRole(checkP) then isLobby = false break end
+                                end
+                                
+                                if isLobby then
+                                    highlight.FillColor = Color3.fromRGB(240, 240, 240)
+                                    highlight.OutlineColor = Color3.fromRGB(255, 255, 255)
+                                else
+                                    if hasKnife then
+                                        highlight.FillColor = Color3.fromRGB(255, 40, 40)
+                                        highlight.OutlineColor = Color3.fromRGB(255, 150, 150)
+                                    elseif hasGun then
+                                        highlight.FillColor = Color3.fromRGB(255, 215, 0)
+                                        highlight.OutlineColor = Color3.fromRGB(255, 255, 150)
+                                    else
+                                        highlight.FillColor = Color3.fromRGB(50, 255, 50)
+                                        highlight.OutlineColor = Color3.fromRGB(180, 255, 180)
+                                    end
+                                end
+                                task.wait(0.5)
+                            end
+                        end)
+                    end
+                    if p.Character then applyESP(p.Character) end
+                    table.insert(espConnections, p.CharacterAdded:Connect(applyESP))
+                end
+            end
+        else
+            for _, p in ipairs(Players:GetPlayers()) do
+                if p.Character and p.Character:FindFirstChild("FinalESP") then p.Character.FinalESP:Destroy() end
+            end
+            for _, conn in ipairs(espConnections) do conn:Disconnect() end
+            espConnections = {}
+        end
+    end)
+
+
+    -- 2. 총 ESP
+    local gunEspConnections = {}
+    CreateFeatureButton("총 ESP", function(state)
+        if state then
+            local function trackGun(obj)
+                if obj:IsA("Tool") or obj:IsA("Model") then
+                    local nameLower = obj.Name:lower()
+                    if nameLower:find("gun") or nameLower:find("총") or nameLower:find("revolver") then
+                        if not obj:FindFirstChild("FinalGunBox") then
+                            local box = Instance.new("Highlight")
+                            box.Name = "FinalGunBox"
+                            box.Adornee = obj
+                            box.FillColor = Color3.fromRGB(255, 215, 0)
+                            box.OutlineColor = Color3.fromRGB(255, 255, 255)
+                            box.FillTransparency = 0.2
+                            box.Parent = obj
+                        end
+                    end
+                end
+            end
+            for _, obj in ipairs(workspace:GetChildren()) do trackGun(obj) end
+            for _, obj in ipairs(workspace:GetDescendants()) do
+                if obj:IsA("Tool") then trackGun(obj) end
+            end
+            table.insert(gunEspConnections, workspace.ChildAdded:Connect(trackGun))
+            table.insert(gunEspConnections, workspace.DescendantAdded:Connect(trackGun))
+        else
+            for _, obj in ipairs(workspace:GetDescendants()) do
+                if obj.Name == "FinalGunBox" then obj:Destroy() end
+            end
+            for _, conn in ipairs(gunEspConnections) do conn:Disconnect() end
+            gunEspConnections = {}
+        end
+    end)
+
+
+    -- 3. 히트박스 ESP
+    local hitboxActive = false
+    CreateFeatureButton("히트박스 ESP", function(state)
+        hitboxActive = state
+    end)
+
+    RunService.Heartbeat:Connect(function()
+        if hitboxActive then
+            pcall(function()
+                for _, p in ipairs(Players:GetPlayers()) do
+                    if p ~= LocalPlayer and p.Character and p.Character:FindFirstChild("HumanoidRootPart") then
+                        local hrp = p.Character.HumanoidRootPart
+                        hrp.Size = Vector3.new(5, 5, 5)
+                        hrp.Transparency = 0.8
+                        hrp.CanCollide = false
+                    end
+                end
+            end)
+        else
+            pcall(function()
+                for _, p in ipairs(Players:GetPlayers()) do
+                    if p ~= LocalPlayer and p.Character and p.Character:FindFirstChild("HumanoidRootPart") then
+                        local hrp = p.Character.HumanoidRootPart
+                        hrp.Size = Vector3.new(2, 2, 1)
+                        hrp.Transparency = 1
+                    end
+                end
+            end)
+        end
+    end)
+
+
+    -- 4. 에임 조준 < 보안관 전용 >
+    local silentAimActive = false
+    CreateFeatureButton("에임 조준 < 보안관 전용 >", function(state)
+        silentAimActive = state
+    end)
+
+    RunService.RenderStepped:Connect(function()
+        if silentAimActive then
+            pcall(function()
+                local char = LocalPlayer.Character
+                if not char or not char:FindFirstChild("HumanoidRootPart") then return end
+                
+                local targetPart = nil
+                local shortestDist = math.huge
+                
+                for _, p in ipairs(Players:GetPlayers()) do
+                    if p ~= LocalPlayer and p.Character and p.Character:FindFirstChild("HumanoidRootPart") then
+                        local isMurderer = false
+                        if p:FindFirstChild("Backpack") then
+                            for _, item in ipairs(p.Backpack:GetChildren()) do
+                                local n = item.Name:lower()
+                                if n:find("knife") or n:find("칼") or n:find("dagger") then isMurderer = true end
+                            end
+                        end
+                        local equipped = p.Character:FindFirstChildOfClass("Tool")
+                        if equipped then
+                            local en = equipped.Name:lower()
+                            if en:find("knife") or en:find("칼") or en:find("dagger") then isMurderer = true end
+                        end
+                        
+                        if isMurderer then
+                            local targetNode = p.Character:FindFirstChild("Head") or p.Character.HumanoidRootPart
+                            local dist = (char.HumanoidRootPart.Position - targetNode.Position).Magnitude
+                            if dist < shortestDist then
+                                shortestDist = dist
+                                targetPart = targetNode
+                            end
+                        end
+                    end
+                end
+                
+                if targetPart then
+                    local camera = workspace.CurrentCamera
+                    camera.CFrame = CFrame.new(camera.CFrame.Position, targetPart.Position)
+                end
+            end)
+        end
+    end)
+
+
+    -- [NEW FIX] 4-1. 모바일용 오토 슛 버튼 (실제 총기 발사 함수 직접 호출)
+    local AutoShootBtn = Instance.new("TextButton")
+    AutoShootBtn.Name = "AutoShootButton"
+    AutoShootBtn.Size = UDim2.new(0, 65, 0, 65)
+    AutoShootBtn.Position = UDim2.new(1, -90, 0.7, -35)
+    AutoShootBtn.BackgroundColor3 = Color3.fromRGB(220, 50, 50)
+    AutoShootBtn.Text = "AUTO\nSHOOT"
+    AutoShootBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+    AutoShootBtn.TextSize, AutoShootBtn.Font = 11, Enum.Font.GothamBold
+    AutoShootBtn.Visible = false
+    AutoShootBtn.Parent = ScreenGui
+
+    Instance.new("UICorner", AutoShootBtn).CornerRadius = UDim.new(1, 0)
+    local AutoShootStroke = Instance.new("UIStroke")
+    AutoShootStroke.Color = Color3.fromRGB(255, 255, 255)
+    AutoShootStroke.Thickness = 2
+    AutoShootStroke.Parent = AutoShootBtn
+
+    CreateFeatureButton("모바일 오토 슛 버튼 표시", function(state)
+        AutoShootBtn.Visible = state
+    end)
+
+    AutoShootBtn.MouseButton1Click:Connect(function()
+        pcall(function()
+            local char = LocalPlayer.Character
+            if not char or not char:FindFirstChild("HumanoidRootPart") then return end
+            
+            -- 총이 손에 없으면 백팩에서 찾아 꺼내기
+            local gunTool = char:FindFirstChildOfClass("Tool")
+            if not gunTool or (not gunTool.Name:lower().find("gun") and not gunTool.Name:lower().find("총") and not gunTool.Name:lower().find("revolver")) then
+                if LocalPlayer:FindFirstChild("Backpack") then
+                    for _, item in ipairs(LocalPlayer.Backpack:GetChildren()) do
+                        local n = item.Name:lower()
+                        if n:find("gun") or n:find("총") or n:find("revolver") then
+                            LocalPlayer.Character.Humanoid:EquipTool(item)
+                            gunTool = item
+                            task.wait(0.15)
+                            break
+                        end
+                    end
+                end
+            end
+            
+            -- 가장 가까운 살인마 찾기
+            local targetPart = nil
+            local shortestDist = math.huge
+            
+            for _, p in ipairs(Players:GetPlayers()) do
+                if p ~= LocalPlayer and p.Character and p.Character:FindFirstChild("HumanoidRootPart") then
+                    local isMurderer = false
+                    if p:FindFirstChild("Backpack") then
+                        for _, item in ipairs(p.Backpack:GetChildren()) do
+                            local n = item.Name:lower()
+                            if n:find("knife") or n:find("칼") or n:find("dagger") then isMurderer = true end
+                        end
+                    end
+                    local equipped = p.Character:FindFirstChildOfClass("Tool")
+                    if equipped then
+                        local en = equipped.Name:lower()
+                        if en:find("knife") or en:find("칼") or en:find("dagger") then isMurderer = true end
+                    end
+                    
+                    if isMurderer then
+                        local targetNode = p.Character:FindFirstChild("Head") or p.Character.HumanoidRootPart
+                        local dist = (char.HumanoidRootPart.Position - targetNode.Position).Magnitude
+                        if dist < shortestDist then
+                            shortestDist = dist
+                            targetPart = targetNode
+                        end
+                    end
+                end
+            end
+            
+            -- 살인마가 있으면 시점을 맞추고 총기 활성화(발사) 실행
+            if targetPart then
+                local camera = workspace.CurrentCamera
+                camera.CFrame = CFrame.new(camera.CFrame.Position, targetPart.Position)
+                task.wait(0.05)
+                
+                -- 현재 손에 쥐고 있는 총 도구 가져오기
+                local currentTool = char:FindFirstChildOfClass("Tool")
+                if currentTool then
+                    -- 로블록스 도구 발사 함수 강제 호출 (모바일 환경 대응)
+                    currentTool:Activate()
+                end
+            end
+        end)
+    end)
+
+
+    -- [5] 조준선 (새빨간색 동그라미 모양 + 얇은 검은색 윤곽선)
+    local crosshairActive = false
+    local CrosshairGui = Instance.new("Folder")
+    CrosshairGui.Name = "CustomCrosshairHolder"
+    CrosshairGui.Parent = ScreenGui
+    
+    local CH_Dot = Instance.new("Frame")
+    CH_Dot.Size = UDim2.new(0, 10, 0, 10)
+    CH_Dot.Position = UDim2.new(0.5, -5, 0.5, -5)
+    CH_Dot.BackgroundColor3 = Color3.fromRGB(255, 0, 0) -- 새빨간색
+    CH_Dot.BorderSizePixel = 0
+    CH_Dot.Visible = false
+    CH_Dot.Parent = CrosshairGui
+
+    local DotCorner = Instance.new("UICorner")
+    DotCorner.CornerRadius = UDim.new(1, 0) -- 동그라미 형태로 만들기
+    DotCorner.Parent = CH_Dot
+
+    local DotStroke = Instance.new("UIStroke")
+    DotStroke.Color = Color3.fromRGB(0, 0, 0) -- 얇은 검은색 윤곽선
+    DotStroke.Thickness = 1
+    DotStroke.Parent = CH_Dot
+
+    CreateFeatureButton("조준선", function(state)
+        crosshairActive = state
+        CH_Dot.Visible = state
+    end)
+
+
+    -- 6. 맵 풀브라이트
+    CreateFeatureButton("맵 풀브라이트", function(state)
+        if state then
+            Lighting.Brightness = 2
+            Lighting.ClockTime = 14
+            Lighting.FogEnd = 100000
+            Lighting.GlobalShadows = false
+        else
+            Lighting.Brightness = 1
+            Lighting.GlobalShadows = true
+        end
+    end)
+
+
+    -- 7. 플레이어 네임택 & 거리 정보
+    local nameTagConnections = {}
+    CreateFeatureButton("플레이어 네임택 & 거리", function(state)
+        if state then
+            for _, p in ipairs(Players:GetPlayers()) do
+                if p ~= LocalPlayer then
+                    local function addTag(char)
+                        if not char:FindFirstChild("Head") then return end
+                        if char.Head:FindFirstChild("NameBillboard") then char.Head.NameBillboard:Destroy() end
+                        
+                        local bb = Instance.new("BillboardGui")
+                        bb.Name = "NameBillboard"
+                        bb.Adornee = char.Head
+                        bb.Size = UDim2.new(0, 120, 0, 40)
+                        bb.StudsOffset = Vector3.new(0, 2.5, 0)
+                        bb.AlwaysOnTop = true
+                        bb.Parent = char.Head
+                        
+                        local lbl = Instance.new("TextLabel")
+                        lbl.Size = UDim2.new(1, 0, 1, 0)
+                        lbl.BackgroundTransparency = 1
+                        lbl.TextColor3 = Color3.fromRGB(255, 255, 255)
+                        lbl.TextStrokeTransparency = 0.3
+                        lbl.TextSize = 11
+                        lbl.Font = Enum.Font.GothamBold
+                        lbl.Parent = bb
+                        
+                        task.spawn(function()
+                            while bb.Parent and LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") and char:FindFirstChild("HumanoidRootPart") do
+                                local dist = math.floor((LocalPlayer.Character.HumanoidRootPart.Position - char.HumanoidRootPart.Position).Magnitude)
+                                lbl.Text = string.format("%s\n[%dm]", p.Name, dist)
+                                task.wait(0.3)
+                            end
+                        end)
+                    end
+                    if p.Character then addTag(p.Character) end
+                    table.insert(nameTagConnections, p.CharacterAdded:Connect(addTag))
+                end
+            end
+        else
+            for _, p in ipairs(Players:GetPlayers()) do
+                if p.Character and p.Character:FindFirstChild("Head") then
+                    local tag = p.Character.Head:FindFirstChild("NameBillboard")
+                    if tag then tag:Destroy() end
+                end
+            end
+            for _, conn in ipairs(nameTagConnections) do conn:Disconnect() end
+            nameTagConnections = {}
+        end
+    end)
+end
+
+
+-- [3] 로딩 화면 종료 후 메인 허브 실행
+task.spawn(function()
+    local startTime = tick()
+    local duration = 3.0
+    
+    while true do
+        local elapsed = tick() - startTime
+        local alpha = math.clamp(elapsed / duration, 0, 1)
+        local percent = math.floor(alpha * 100)
+        local timeLeft = math.max(0, duration - elapsed)
+        
+        BarFill.Size = UDim2.new(alpha, 0, 1, 0)
+        PercentLabel.Text = percent .. "%"
+        TimeLeftLabel.Text = string.format("%.1fs LEFT", timeLeft)
+        
+        if alpha >= 1 then break end
+        task.wait(0.02)
+    end
+    
+    local tweenInfo = TweenInfo.new(0.6, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
+    TweenService:Create(LoadingFrame, tweenInfo, {BackgroundTransparency = 1}):Play()
+    for _, obj in ipairs(CenterContainer:GetChildren()) do
+        if obj:IsA("TextLabel") or obj:IsA("Frame") then
+            TweenService:Create(obj, tweenInfo, {BackgroundTransparency = 1, Transparency = 1}):Play()
+        end
+    end
+    TweenService:Create(BarBg, tweenInfo, {BackgroundTransparency = 1}):Play()
+    TweenService:Create(BarFill, tweenInfo, {BackgroundTransparency = 1}):Play()
+    TweenService:Create(OuterStroke, tweenInfo, {Transparency = 1}):Play()
+    
+    task.wait(0.6)
+    LoadingFrame:Destroy()
+    
+    BuildMainHub()
+end)
+
